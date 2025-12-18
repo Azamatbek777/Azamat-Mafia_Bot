@@ -1,32 +1,33 @@
-# ================= PROFESSIONAL MAFIA TELEGRAM BOT WITH TIMER =================
+# ================= PROFESSIONAL MAFIA TELEGRAM BOT =================
 # python-telegram-bot v20+
-# Night/Day + Admin panel + Statistics + Language + Timer + Join info
+# Night/Day (kill/heal/check) + Admin panel + Statistika + Til sozlamalari (UZ/RU/EN) + Timer
 
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 import random, asyncio
 from collections import Counter, defaultdict
 
-API_TOKEN = "8034346294:AAE53a_P73UK_oXP15gnBH1hlXiB5hKUZ74"
+API_TOKEN = "8034346294:AAE53a_P73UK_oXP15gnBH1hlXiB5hKUZ74"  # Telegram bot tokeningizni yozing
 
 # ================= DATA =================
 games = {}
 chat_lang = defaultdict(lambda: "uz")
 admins = set()  # admin user_id lar
-paid_rooms = set()  # pullik chat_id lar
+paid_rooms = set()
 stats = defaultdict(lambda: {"games": 0, "wins": 0})
-# Default o'yin vaqtlari (soniya)
-game_timers = defaultdict(lambda: {"night": 30, "day": 60})  # sozlamalarda o'zgartirish mumkin
+timers = defaultdict(lambda: {"day": 60, "night": 30})  # default sekundlarda
+
+ROLES = ["Don", "Mafia", "Mafia", "Komissar", "Shifokor"]
 
 LANG = {
     "uz": {
         "night": "🌙 KECHA",
         "day": "🌞 KUN",
-        "join": "➕ Qo‘shilish",
+        "join": "➕ Qo‘shilish ({count})",
         "begin": "▶️ Boshlash",
         "settings": "⚙️ Sozlamalar",
         "need5": "❌ Kamida 5 o‘yinchi kerak",
-        "joined": "✅ {} qo‘shildi! Umumiy o‘yinchilar: {}",
+        "joined": "✅ Siz o‘yinga qo‘shildingiz",
         "already": "❌ Siz allaqachon o‘yindasiz",
         "started": "🎉 O‘yin boshlandi!",
         "vote": "🗳 Ovoz bering",
@@ -38,17 +39,16 @@ LANG = {
         "paid": "💰 Pullik xona",
         "winner": "🏆 O‘yin yakunlandi! G‘oliblar: {}",
         "night_msg": "🌙 KECHA boshlandi. Maxfiy harakatlar qilinmoqda...",
-        "day_msg": "🌞 KUN boshlandi. Ovoz berish davom etmoqda...",
-        "timer_set": "⏱ {} vaqti {} soniyaga o‘zgartirildi"
+        "day_msg": "🌞 KUN boshlandi. Ovoz berish davom etmoqda..."
     },
     "ru": {
         "night": "🌙 НОЧЬ",
         "day": "🌞 ДЕНЬ",
-        "join": "➕ Присоединиться",
+        "join": "➕ Присоединиться ({count})",
         "begin": "▶️ Начать",
         "settings": "⚙️ Настройки",
         "need5": "❌ Нужно минимум 5 игроков",
-        "joined": "✅ {} присоединился! Всего игроков: {}",
+        "joined": "✅ Вы присоединились к игре",
         "already": "❌ Вы уже в игре",
         "started": "🎉 Игра началась!",
         "vote": "🗳 Голосуйте",
@@ -60,17 +60,16 @@ LANG = {
         "paid": "💰 Платная комната",
         "winner": "🏆 Игра окончена! Победители: {}",
         "night_msg": "🌙 Ночь началась. Совершаются секретные действия...",
-        "day_msg": "🌞 День начался. Голосование продолжается...",
-        "timer_set": "⏱ {} время изменено на {} секунд"
+        "day_msg": "🌞 День начался. Голосование продолжается..."
     },
     "en": {
         "night": "🌙 NIGHT",
         "day": "🌞 DAY",
-        "join": "➕ Join",
+        "join": "➕ Join ({count})",
         "begin": "▶️ Start",
         "settings": "⚙️ Settings",
         "need5": "❌ Minimum 5 players required",
-        "joined": "✅ {} joined! Total players: {}",
+        "joined": "✅ You joined the game",
         "already": "❌ You are already in the game",
         "started": "🎉 Game started!",
         "vote": "🗳 Vote",
@@ -82,12 +81,9 @@ LANG = {
         "paid": "💰 Paid room",
         "winner": "🏆 Game over! Winners: {}",
         "night_msg": "🌙 NIGHT has begun. Secret actions are happening...",
-        "day_msg": "🌞 DAY has begun. Voting is ongoing...",
-        "timer_set": "⏱ {} time changed to {} seconds"
+        "day_msg": "🌞 DAY has begun. Voting is ongoing..."
     }
 }
-
-ROLES = ["Don", "Mafia", "Mafia", "Komissar", "Shifokor"]
 
 # ================= GAME CLASS =================
 class Game:
@@ -103,31 +99,45 @@ class Game:
     def name(self, uid):
         for i, n in self.players:
             if i == uid:
-                return n
+                return f"[{n}](tg://user?id={uid})"
         return "?"
 
 # ================= MENUS =================
 def main_menu(chat_id=None):
     lang = LANG[chat_lang[chat_id]] if chat_id else LANG["uz"]
+    g = games.get(chat_id)
+    count = len(g.players) if g else 0
+    join_text = lang["join"].format(count=count)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(lang["join"], callback_data="join"),
-         InlineKeyboardButton(lang["begin"], callback_data="begin")],
-        [InlineKeyboardButton(lang["settings"], callback_data="settings"),
-         InlineKeyboardButton(lang["stats"], callback_data="stats")]
+        [InlineKeyboardButton(join_text, callback_data="join"), InlineKeyboardButton(lang["begin"], callback_data="begin")],
+        [InlineKeyboardButton(lang["settings"], callback_data="settings"), InlineKeyboardButton(lang["stats"], callback_data="stats")]
     ])
 
-def settings_menu():
+def settings_menu(chat_id=None):
+    timer = timers[chat_id] if chat_id else {"day": 60, "night": 30}
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🇺🇿 Uzbek", callback_data="lang:uz"),
          InlineKeyboardButton("🇷🇺 Russian", callback_data="lang:ru"),
          InlineKeyboardButton("🇬🇧 English", callback_data="lang:en")],
-        [InlineKeyboardButton("⏱ Night", callback_data="set_night"),
-         InlineKeyboardButton("⏱ Day", callback_data="set_day")]
+        [InlineKeyboardButton(f"⏱ Tun: {timer['night']}s", callback_data="timer_night"),
+         InlineKeyboardButton(f"⏱ Kun: {timer['day']}s", callback_data="timer_day")]
     ])
 
 # ================= START =================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🎮 Mafia Bot", reply_markup=main_menu(update.effective_chat.id))
+
+# ================= ADMIN COMMANDS =================
+async def premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in admins:
+        await update.message.reply_text("❌ Siz admin emassiz")
+        return
+    paid_rooms.add(update.effective_chat.id)
+    await update.message.reply_text("💰 Bu xona endi pullik")
+
+async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    games.pop(update.effective_chat.id, None)
+    await update.message.reply_text("♻️ O‘yin reset qilindi")
 
 # ================= CALLBACK =================
 async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -138,16 +148,14 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = q.data
     lang = LANG[chat_lang[chat]]
 
-    # Join
     if data == "join":
         games.setdefault(chat, Game(chat))
         g = games[chat]
         if user.id in [p[0] for p in g.players]:
             return await q.edit_message_text(lang["already"], reply_markup=main_menu(chat))
         g.players.append((user.id, user.full_name))
-        await q.edit_message_text(lang["joined"].format(user.full_name, len(g.players)), reply_markup=main_menu(chat))
+        await q.edit_message_text(lang["joined"], reply_markup=main_menu(chat))
 
-    # Begin
     elif data == "begin":
         g = games.get(chat)
         if not g or len(g.players) < 5:
@@ -168,56 +176,78 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         g.phase = "night"
         await context.bot.send_message(chat, lang["night_msg"])
-        await night_phase(context, chat)
+        asyncio.create_task(night_phase(context, chat))
 
-    # Settings
     elif data == "settings":
-        await q.edit_message_text("⚙️ Til va vaqtlarni sozlang:", reply_markup=settings_menu())
+        await q.edit_message_text("⚙️ Til va taymer sozlamalari:", reply_markup=settings_menu(chat))
 
     elif data.startswith("lang:"):
         _, l = data.split(":")
         chat_lang[chat] = l
         await q.edit_message_text(f"✅ Til o‘zgartirildi: {l.upper()}", reply_markup=main_menu(chat))
 
-    elif data == "set_night":
-        await q.edit_message_text("⏱ Yangi Night vaqtini sekundda yuboring (masalan 30):")
-        context.user_data["set_timer"] = "night"
+    elif data.startswith("timer_"):
+        t_type = "night" if "night" in data else "day"
+        timers[chat][t_type] = (timers[chat][t_type] + 10) % 300 or 10
+        await q.edit_message_text("⏱ Taymer o‘zgartirildi", reply_markup=settings_menu(chat))
 
-    elif data == "set_day":
-        await q.edit_message_text("⏱ Yangi Day vaqtini sekundda yuboring (masalan 60):")
-        context.user_data["set_timer"] = "day"
+    elif data == "stats":
+        s = stats[user.id]
+        await q.edit_message_text(f"📊 Statistika:\nO‘yinlar: {s['games']}\nG‘alabalar: {s['wins']}")
 
-# ================= SET TIMER MESSAGES =================
-async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat = update.effective_chat.id
-    if "set_timer" in context.user_data:
-        phase = context.user_data.pop("set_timer")
-        try:
-            sec = int(update.message.text)
-            game_timers[chat][phase] = sec
-            lang = LANG[chat_lang[chat]]
-            await update.message.reply_text(lang["timer_set"].format(phase.capitalize(), sec))
-        except:
-            await update.message.reply_text("❌ Iltimos raqam kiriting!")
+# ================= NIGHT CALLBACK =================
+async def night_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    chat = q.message.chat.id
+    g = games.get(chat)
+    if not g or g.phase != "night":
+        return
+    user = q.from_user.id
+    action, target = q.data.split(":")
+    target = int(target)
+    if user not in g.alive:
+        return
+    role = g.roles[user]
+    if action == "kill" and role in ("Mafia", "Don"):
+        g.night["kill"] = target
+        await q.edit_message_text(f"🔫 Tanlandi: {g.name(target)}")
+    elif action == "heal" and role == "Shifokor":
+        g.night["heal"] = target
+        await q.edit_message_text(f"💉 Saqlandi: {g.name(target)}")
+    elif action == "check" and role == "Komissar":
+        result = "MAFIA" if g.roles[target] in ("Mafia", "Don") else "TINCH"
+        await q.edit_message_text(f"🕵️ Natija: {g.name(target)} — {result}")
+    if g.night["kill"] is not None and g.night["heal"] is not None:
+        await resolve_night(context, chat)
 
-# ================= NIGHT / DAY fazalari =================
-# NIGHT/DAY fazalari va ovoz berish funksiyalari oldingi kodga mos ravishda ishlaydi,
-# ammo endi game_timers[chat]["night"] va game_timers[chat]["day"] sekundlarini ishlatadi
-# va faza tugashi uchun asyncio.sleep(game_timers[chat][phase]) qo‘shiladi
+# ================= VOTE CALLBACK =================
+async def vote_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    chat = q.message.chat.id
+    g = games.get(chat)
+    if not g or g.phase != "day":
+        return
+    voter = q.from_user.id
+    if voter not in g.alive:
+        return
+    action, target = q.data.split(":")
+    target = int(target)
+    g.votes[voter] = target
+    await q.edit_message_text(f"✅ Siz {g.name(target)} ga ovoz berdingiz")
+    if len(g.votes) == len(g.alive):
+        await resolve_day(context, chat)
 
 # ================= MAIN =================
 def main():
     app = ApplicationBuilder().token(API_TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("premium", premium))
     app.add_handler(CommandHandler("reset", reset))
     app.add_handler(CallbackQueryHandler(callback))
     app.add_handler(CallbackQueryHandler(night_callback, pattern="^(kill|heal|check):"))
     app.add_handler(CallbackQueryHandler(vote_callback, pattern="^vote:"))
-    app.add_handler(CommandHandler("set_timer", set_timer))
-    app.add_handler(MessageHandler(filters=None, callback=set_timer))  # Timer uchun
-
     print("✅ Mafia bot FULL ishga tushdi")
     app.run_polling()
 
