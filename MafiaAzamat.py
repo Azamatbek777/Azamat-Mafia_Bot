@@ -3,7 +3,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 import random, asyncio
 from collections import Counter, defaultdict
 
-API_TOKEN = "8576846335:AAF3D7ph_HY_tZq-huGGLjBQThfchaXhUzc"
+API_TOKEN = "8034346294:AAE53a_P73UK_oXP15gnBH1hlXiB5hKUZ74"
 
 # ================= DATA =================
 games = {}
