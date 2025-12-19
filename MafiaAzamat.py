@@ -302,6 +302,7 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = LANG[chat_lang[chat]]
 
     # JOIN
+    '''
     if data == "join":
         if user.id not in users_started:
             await q.answer("❌ Avvalo botga /start bosing!", show_alert=True)
@@ -313,6 +314,37 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         g.players.append((user.id, user.full_name))
         #await q.edit_message_text(lang["joined"], reply_markup=main_menu(chat))
         await q.answer(lang["joined"],show_alert=True)
+    '''
+    if data == "join":
+    # Agar start bosmagan bo‘lsa
+    if user.id not in users_started:
+        join_link = f"https://t.me/{MafiaAzamat_bot}?start=join_{chat}"
+
+        await q.answer(
+            "🔐 Rolni maxfiy olish uchun botga /start bosing",
+            show_alert=True
+        )
+
+        await q.message.reply_text(
+            "👇 Botga o'tib /start bosing, keyin avtomatik o‘yinga qo‘shilasiz:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🤖 Botga START", url=join_link)]
+            ])
+        )
+        return
+
+    games.setdefault(chat, Game(chat))
+    g = games[chat]
+
+    if user.id in [p[0] for p in g.players]:
+        await q.answer(lang["already"], show_alert=True)
+        return
+
+    g.players.append((user.id, user.full_name))
+    await q.answer(lang["joined"], show_alert=True)
+
+    await q.message.edit_reply_markup(reply_markup=main_menu(chat))
+
 
     # BEGIN
     elif data == "begin":
