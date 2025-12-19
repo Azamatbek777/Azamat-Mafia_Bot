@@ -300,7 +300,8 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user.id in [p[0] for p in g.players]:
             return await q.edit_message_text(lang["already"], reply_markup=main_menu(chat))
         g.players.append((user.id, user.full_name))
-        await q.edit_message_text(lang["joined"], reply_markup=main_menu(chat))
+        #await q.edit_message_text(lang["joined"], reply_markup=main_menu(chat))
+        await q.answer(lang["joined"],show_alert=True)
 
     # BEGIN
     elif data == "begin":
