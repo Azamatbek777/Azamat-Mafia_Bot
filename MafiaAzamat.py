@@ -199,7 +199,7 @@ async def advert(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-    await update.message.reply_text("✅ Reklama barcha foydalanuvchilarga yuborildi")
+    await update.message.reply_text("✅ Reklama"+len(users_started)+ "ta foydalanuvcchiga yuborildi yuborildi")
 
 # ================= TIMER FUNCTIONS =================
 async def timer_setup_start(update: Update, context: ContextTypes.DEFAULT_TYPE, timer_type: str):
