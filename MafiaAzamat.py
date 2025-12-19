@@ -183,7 +183,7 @@ async def BotR(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Reklama matnini yozing:\n/BotR <matn>")
         return
     ad_text = " ".join(context.args)
-    ad_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Batafsil", url="@azamat_x007")]])
+    ad_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Batafsil", url="https://t.me/azamat_x007")]])
 
     # Shaxsiy chatlar
     for uid in users_started:
@@ -192,7 +192,7 @@ async def BotR(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-    await update.message.reply_text(f"✅ Reklama {len(users_started)} ta foydalanuvcchiga yuborildi yuborildi")
+    await update.message.reply_text(f"✅ Reklama {len(users_started)} ta foydalanuvchiga yuborildi yuborildi")
 async def GroupR(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("❌ Siz admin emassiz")
@@ -201,7 +201,7 @@ async def GroupR(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Reklama matnini yozing:\n/GroupR <matn>")
         return
     ad_text = " ".join(context.args)
-    ad_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Batafsil", url="@azamat_x007")]])
+    ad_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Batafsil", url="https://t.me/azamat_x007")]])
 
     # Guruhdagi o'yinlar
     for chat_id in games.keys():
@@ -210,7 +210,7 @@ async def GroupR(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-    await update.message.reply_text(f"✅ Reklama {len(games)} ta foydalanuvcchiga yuborildi yuborildi")
+    await update.message.reply_text(f"✅ Reklama {len(games)} ta foydalanuvchiga yuborildi yuborildi")
 
 # ================= TIMER FUNCTIONS =================
 async def timer_setup_start(update: Update, context: ContextTypes.DEFAULT_TYPE, timer_type: str):
