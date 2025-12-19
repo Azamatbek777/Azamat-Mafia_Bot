@@ -175,15 +175,15 @@ async def premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
     paid_rooms.add(update.effective_chat.id)
     await update.message.reply_text("💰 Bu xona endi pullik")
 
-async def advert(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def BotR(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("❌ Siz admin emassiz")
         return
     if not context.args:
-        await update.message.reply_text("❌ Reklama matnini yozing:\n/advert <matn>")
+        await update.message.reply_text("❌ Reklama matnini yozing:\n/BotR <matn>")
         return
     ad_text = " ".join(context.args)
-    ad_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Batafsil", url="https://t.me/your_channel")]])
+    ad_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Batafsil", url="@azamat_x007")]])
 
     # Shaxsiy chatlar
     for uid in users_started:
@@ -191,6 +191,17 @@ async def advert(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(uid, f"📢 Reklama:\n\n{ad_text}", reply_markup=ad_button)
         except:
             pass
+
+    await update.message.reply_text("✅ Reklama"+len(users_started)+ "ta foydalanuvcchiga yuborildi yuborildi")
+async def GroupR(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("❌ Siz admin emassiz")
+        return
+    if not context.args:
+        await update.message.reply_text("❌ Reklama matnini yozing:\n/GroupR <matn>")
+        return
+    ad_text = " ".join(context.args)
+    ad_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Batafsil", url="@azamat_x007")]])
 
     # Guruhdagi o'yinlar
     for chat_id in games.keys():
@@ -471,7 +482,8 @@ def main():
     app = ApplicationBuilder().token(API_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("premium", premium))
-    app.add_handler(CommandHandler("advert", advert))
+    app.add_handler(CommandHandler("BotR",BotR))
+    app.add_handler(CommandHandler("GroupR",GroupR))
     app.add_handler(CallbackQueryHandler(callback))
     app.add_handler(CallbackQueryHandler(night_callback, pattern="^(kill|heal|check):"))
     app.add_handler(CallbackQueryHandler(vote_callback, pattern="^vote:"))
