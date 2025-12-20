@@ -304,10 +304,11 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # JOIN
     
     if data == "join":
-        
+        '''
         if user.id not in users_started:
             await q.answer("❌ Avvalo botga /start bosing!", show_alert=True)
             return
+        '''
         games.setdefault(chat, Game(chat))
         g = games[chat]
         if user.id in [p[0] for p in g.players]:
